@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web RTC 系统检测</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .button-group {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .start-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .start-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .test-section {
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .test-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .icon-pending {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+        .icon-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .icon-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            font-size: 14px;
+        }
+        .test-label {
+            color: #555;
+        }
+        .test-value {
+            font-weight: 500;
+        }
+        .value-success {
+            color: #28a745;
+        }
+        .value-error {
+            color: #dc3545;
+        }
+        .value-info {
+            color: #17a2b8;
+        }
+        .device-list {
+            margin-top: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .device-item {
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+        }
+        .device-item:last-child {
+            border-bottom: none;
+        }
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .log-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1e1e1e;
+            border-radius: 8px;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-line {
+            padding: 4px 0;
+            border-bottom: 1px solid #333;
+        }
+        .log-line:last-child {
+            border-bottom: none;
+        }
+        .log-info {
+            color: #4ec9b0;
+        }
+        .log-success {
+            color: #6a9955;
+        }
+        .log-error {
+            color: #f44747;
+        }
+        .log-warning {
+            color: #dcdcaa;
+        }
+        .wave-container {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            height: 60px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .wave-bar {
+            width: 8px;
+            background: linear-gradient(to top, #667eea, #764ba2);
+            border-radius: 4px;
+            transition: height 0.1s ease;
+        }
+        .wave-bar.capture {
+            background: linear-gradient(to top, #28a745, #20c997);
+        }
+        .wave-bar.playback {
+            background: linear-gradient(to top, #ff6b6b, #ffa502);
+        }
+        .wave-label {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+        .audio-test-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .audio-test-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .audio-test-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-start-capture {
+            background: #28a745;
+            color: white;
+        }
+        .btn-start-capture:hover:not(:disabled) {
+            background: #218838;
+        }
+        .btn-stop-capture {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-stop-capture:hover:not(:disabled) {
+            background: #c82333;
+        }
+        .btn-play {
+            background: #ffc107;
+            color: #333;
+        }
+        .btn-play:hover:not(:disabled) {
+            background: #e0a800;
+        }
+        .resolution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .resolution-item {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .resolution-item.supported {
+            background: #d4edda;
+            color: #155724;
+        }
+        .resolution-item.unsupported {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Web RTC 系统检测</h1>
+            <p>基于火山引擎 Web RTC SDK 的系统兼容性检测工具</p>
+        </div>
+        <div class="content">
+            <div class="button-group">
+                <button id="startBtn" class="start-btn" onclick="startDetection()">开始检测</button>
+            </div>
+            <div class="result-container">
+                <div class="test-section" id="browser-section">
+                    <div class="section-title">
+                        <span class="section-icon icon-pending" id="browser-icon">?</span>
+                        <span>浏览器兼容性检测</span>
+                    </div>
+                </div>
+                <div class="test-section" id="device-section">
+                    <div class="section-title">
+                        <span class="section-icon icon-pending" id="device-icon">?</span>
+                        <span>设备获取能力检测</span>
+                    </div>
+                </div>
+                <div class="test-section" id="codec-section">
+                    <div class="section-title">
+                        <span class="section-icon icon-pending" id="codec-icon">?</span>
+                        <span>视频编码检测</span>
+                    </div>
+                </div>
+                <div class="test-section" id="audio-section">
+                    <div class="section-title">
+                        <span class="section-icon icon-pending" id="audio-icon">?</span>
+                        <span>麦克风与扬声器检测</span>
+                    </div>
+                    <div class="wave-container" id="capture-wave-container" style="display: none;">
+                    </div>
+                    <div class="wave-label" id="capture-wave-label" style="display: none;">麦克风采集音量</div>
+                    <div class="wave-container" id="playback-wave-container" style="display: none;">
+                    </div>
+                    <div class="wave-label" id="playback-wave-label" style="display: none;">扬声器播放音量</div>
+                    <div class="audio-test-buttons" id="audio-test-buttons" style="display: none;">
+                        <button class="audio-test-btn btn-start-capture" id="btn-start-capture" onclick="startAudioCapture()">开始采集</button>
+                        <button class="audio-test-btn btn-stop-capture" id="btn-stop-capture" onclick="stopAudioCaptureAndPlay()" disabled>停止采集并播放</button>
+                    </div>
+                </div>
+                <div class="test-section" id="connectivity-section">
+                    <div class="section-title">
+                        <span class="section-icon icon-pending" id="connectivity-icon">?</span>
+                        <span>连通性检测</span>
+                    </div>
+                    <div id="connectivity-inputs" style="margin-top: 15px; display: grid; gap: 10px;">
+                        <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px; align-items: center;">
+                            <label style="font-size: 14px; color: #555;">AppId:</label>
+                            <input type="text" id="input-appId" placeholder="请输入AppId" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px; align-items: center;">
+                            <label style="font-size: 14px; color: #555;">RoomId:</label>
+                            <input type="text" id="input-roomId" placeholder="请输入房间ID" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px; align-items: center;">
+                            <label style="font-size: 14px; color: #555;">UserId:</label>
+                            <input type="text" id="input-uid" placeholder="请输入用户ID" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px; align-items: center;">
+                            <label style="font-size: 14px; color: #555;">Token:</label>
+                            <input type="text" id="input-token" placeholder="请输入Token" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                        </div>
+                    </div>
+                    <div id="video-players" style="margin-top: 15px; display: flex; gap: 20px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">本地预览</div>
+                            <div id="local-player" style="width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                        <button id="btn-connectivity-test" class="audio-test-btn btn-start-capture" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" disabled>开始连通性测试</button>
+                        <button id="btn-connectivity-stop" class="audio-test-btn btn-stop-capture" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" disabled>停止测试</button>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <button id="btn-download-log" class="audio-test-btn btn-start-capture" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onclick="downloadLog()">保存SDK日志</button>
+            </div>
+            <div class="log-container" id="logContainer">
+                <div class="log-line log-info">点击"开始检测"按钮开始系统检测...</div>
+            </div>
+        </div>
+    </div>
+    <script src="libs/index.min.js"></script>
+    <script src="rtc-check.js"></script>
+</body>
+</html>

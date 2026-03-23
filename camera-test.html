@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摄像头能力检测</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+            color: #666;
+        }
+        .button-group {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .device-section {
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .device-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .capability-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            font-size: 14px;
+            border-bottom: 1px solid #eee;
+        }
+        .capability-item:last-child {
+            border-bottom: none;
+        }
+        .capability-label {
+            color: #555;
+            font-weight: 500;
+        }
+        .capability-value {
+            font-weight: 500;
+            color: #667eea;
+        }
+        .log-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1e1e1e;
+            border-radius: 8px;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-line {
+            padding: 4px 0;
+            border-bottom: 1px solid #333;
+        }
+        .log-line:last-child {
+            border-bottom: none;
+        }
+        .log-info {
+            color: #4ec9b0;
+        }
+        .log-success {
+            color: #6a9955;
+        }
+        .log-error {
+            color: #f44747;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>摄像头能力检测</h1>
+            <p>获取 Chrome 浏览器实际支持的摄像头最大分辨率</p>
+        </div>
+        <div class="button-group">
+            <button id="startBtn" class="btn" onclick="getMaxResolution()">开始检测</button>
+        </div>
+        <div class="result-container" id="resultContainer">
+            <div class="device-section" id="capability-section">
+                <div class="section-title">摄像头能力</div>
+                <div style="color: #999; font-size: 14px;">点击"开始检测"按钮获取摄像头能力...</div>
+            </div>
+        </div>
+        <div class="log-container" id="logContainer">
+            <div class="log-line log-info">等待检测...</div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const logLine = document.createElement('div');
+            logLine.className = `log-line log-${type}`;
+            logLine.textContent = message;
+            logContainer.appendChild(logLine);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            console.log(`[${type.toUpperCase()}]`, message);
+        }
+
+        function clearResults() {
+            const capabilitySection = document.getElementById('capability-section');
+            capabilitySection.innerHTML = '<div class="section-title">摄像头能力</div><div style="color: #999; font-size: 14px;">点击"开始检测"按钮获取摄像头能力...</div>';
+            document.getElementById('logContainer').innerHTML = '<div class="log-line log-info">等待检测...</div>';
+        }
+
+        function addCapabilityItem(label, value) {
+            const capabilitySection = document.getElementById('capability-section');
+            const item = document.createElement('div');
+            item.className = 'capability-item';
+            item.innerHTML = `
+                <span class="capability-label">${label}</span>
+                <span class="capability-value">${value}</span>
+            `;
+            capabilitySection.appendChild(item);
+        }
+
+        async function getMaxResolution() {
+            const startBtn = document.getElementById('startBtn');
+            startBtn.disabled = true;
+            clearResults();
+            
+            try {
+                log('开始枚举设备...', 'info');
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                log(`找到 ${devices.length} 个设备`, 'info');
+                
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                log(`找到 ${videoDevices.length} 个视频输入设备`, 'info');
+                
+                if (!videoDevices.length) {
+                    log('未找到摄像头设备', 'error');
+                    addCapabilityItem('摄像头状态', '未找到');
+                    return;
+                }
+                
+                videoDevices.forEach((device, index) => {
+                    log(`摄像头 ${index + 1}: ${device.label || '未命名'} (ID: ${device.deviceId.substring(0, 12)}...)`, 'info');
+                });
+                
+                log('正在获取摄像头权限...', 'info');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        deviceId: videoDevices[0].deviceId,
+                        width: { ideal: 4096 },
+                        height: { ideal: 2160 }
+                    } 
+                });
+                log('摄像头权限获取成功', 'success');
+                
+                const track = stream.getVideoTracks()[0];
+                log(`摄像头: ${track.label || '未命名'}`, 'info');
+                
+                const capabilities = track.getCapabilities();
+                log('摄像头能力获取成功', 'success');
+                console.log('完整 capabilities:', capabilities);
+                
+                const capabilitySection = document.getElementById('capability-section');
+                capabilitySection.innerHTML = '<div class="section-title">摄像头能力</div>';
+                
+                addCapabilityItem('摄像头名称', track.label || '未命名');
+                addCapabilityItem('最大宽度', capabilities.width?.max || 'N/A');
+                addCapabilityItem('最小宽度', capabilities.width?.min || 'N/A');
+                addCapabilityItem('最大高度', capabilities.height?.max || 'N/A');
+                addCapabilityItem('最小高度', capabilities.height?.min || 'N/A');
+                addCapabilityItem('最大帧率', capabilities.frameRate?.max || 'N/A');
+                addCapabilityItem('最小帧率', capabilities.frameRate?.min || 'N/A');
+                addCapabilityItem('支持的宽高比', capabilities.aspectRatio ? `${capabilities.aspectRatio.min} - ${capabilities.aspectRatio.max}` : 'N/A');
+                addCapabilityItem('最大分辨率', `${capabilities.width?.max || 'N/A'} x ${capabilities.height?.max || 'N/A'}`);
+                
+                if (capabilities.facingMode) {
+                    addCapabilityItem('支持的朝向', capabilities.facingMode.join(', '));
+                }
+                
+                log(`最大分辨率: ${capabilities.width?.max} x ${capabilities.height?.max}`, 'success');
+                
+                stream.getTracks().forEach(track => track.stop());
+                log('摄像头已释放', 'info');
+                
+            } catch (error) {
+                console.error(error);
+                log(`检测失败: ${error.message}`, 'error');
+                
+                const capabilitySection = document.getElementById('capability-section');
+                capabilitySection.innerHTML = '<div class="section-title">摄像头能力</div>';
+                addCapabilityItem('错误', error.message);
+            }
+            
+            startBtn.disabled = false;
+        }
+    </script>
+</body>
+</html>
