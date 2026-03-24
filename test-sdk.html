@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDK 加载测试</title>
+</head>
+<body>
+    <h1>SDK 加载测试</h1>
+    <div id="result"></div>
+    
+    <script src="libs/index.min.js"></script>
+    <script>
+        console.log('window.VERTC:', window.VERTC);
+        console.log('typeof VERTC:', typeof window.VERTC);
+        
+        const result = document.getElementById('result');
+        if (window.VERTC) {
+            result.innerHTML = '<p style="color: green;">SDK 加载成功！</p>';
+            result.innerHTML += '<p>VERTC.createEngine: ' + (typeof window.VERTC.createEngine) + '</p>';
+            result.innerHTML += '<p>VERTC.getSupportedCodecs: ' + (typeof window.VERTC.getSupportedCodecs) + '</p>';
+        } else {
+            result.innerHTML = '<p style="color: red;">SDK 加载失败！</p>';
+        }
+    </script>
+</body>
+</html>
